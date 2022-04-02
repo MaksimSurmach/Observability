@@ -1,0 +1,17 @@
+- name: Ansible EC2 instance Launch
+  hosts: localhost
+  tasks:
+    - name: Deploy new EC2 Instance
+      ec2:
+       key_name: ansible
+       aws_access_key: "{{ lookup('env', 'AWS_ACCESS_KEY_ANSIBLE') }}"
+       aws_secret_key: "{{ lookup('env', 'AWS_SECRET_KEY_ANSIBLE') }}"
+       ec2_region: eu-west-1
+       instance_type: t2.micro
+       image: "ami-0000bebe516f304b1"
+       count: 1
+       group_id: sg-0945e956fb1ed560f
+       assign_public_ip: yes
+       vpc_subnet_id: subnet-078959e4c7ddfdcb6
+       instance_tags:
+         Name: Ansible

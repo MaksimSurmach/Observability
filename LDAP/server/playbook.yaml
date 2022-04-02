@@ -1,0 +1,88 @@
+- hosts: aws_ec2
+  become: true
+  tasks:
+    - block:
+      - name: install
+        package:
+          name: '{{ item }}'
+          state: present
+        with_items: 
+          - openldap
+          - openldap-servers
+          #- openldap-clients​
+          - openldap-devel
+        ignore_errors: true
+
+      - name: Create LDAP data directory
+        file:
+          path: "/home/openldap/"
+          state: directory
+          mode: 0755
+
+      - name: uload ldif's
+        copy:
+          src: 'files/{{ item }}'
+          dest: '/home/openldap/'
+        with_items:
+          - baseldapdomain.ldif
+          - ldapdomain.ldif
+          - ldapgroup.ldif
+          - ldaprootpasswd.ldif
+          - ldapuser.ldif
+      tags: [ ldapinstall ]
+
+    - block:
+      - name: "Start slapd service"
+        service: 
+          name: slapd 
+          state: started
+      become: true
+      become_user: root
+      tags: [ ldapstart ]
+
+    - block:
+        - name: add variables
+          shell: export PASSWORD={SSHA}o0Pj4XIrpWgkHADY0bjt/xA4Dq7tgtzk
+
+        - name: configure rootpassword
+          ansible.builtin.shell: |
+            ldapadd -Y EXTERNAL -H ldapi:/// -f /home/openldap/ldaprootpasswd.ldif
+            cp /usr/share/openldap-servers/DB_CONFIG.example /var/lib/ldap/DB_CONFIG
+            chown -R ldap:ldap /var/lib/ldap/DB_CONFIG
+            systemctl restart slapd
+            ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/schema/cosine.ldif 
+            ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/schema/nis.ldif
+            ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/schema/inetorgperson.ldif
+
+            ldapmodify -Y EXTERNAL -H ldapi:/// -f /home/openldap/ldapdomain.ldif
+            ldapadd -x -D cn=Manager,dc=devopslab,dc=com -w $MANAGER_PASSWORD -f /home/openldap/baseldapdomain.ldif
+            ldapadd -x -w $MANAGER_PASSWORD -D "cn=Manager,dc=devopslab,dc=com" -f /home/openldap/ldapgroup.ldif
+            ldapadd -x -D cn=Manager,dc=devopslab,dc=com -w $MANAGER_PASSWORD -f  /home/openldap/ldapuser.ldif
+            exit 0
+
+      tags: [ ldapconfig ]
+
+    - block:
+        - name: install
+          package:
+            name: '{{ item }}'
+            state: present
+          with_items: 
+            - epel-release
+            - phpldapadmin
+          ignore_errors: true
+        
+        - name: configure rootpassword
+          ansible.builtin.shell: |
+            sudo sed -i '397 s;// $servers;$servers;' /etc/phpldapadmin/config.php
+            sudo sed -i '398 s;$servers->setValue;// $servers->setValue;' /etc/phpldapadmin/config.php
+            sudo sed -i ' s;Require local;Require all granted;' /etc/httpd/conf.d/phpldapadmin.conf 
+            sudo sed -i ' s;Allow from 127.0.0.1;Allow from 0.0.0.0;' /etc/httpd/conf.d/phpldapadmin.conf 
+            exit 0
+        - name: "restart phpldap service"
+          service: 
+            name: httpd 
+            state: restarted
+
+      tags: [ phpldap ]
+        
