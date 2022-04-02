@@ -22,8 +22,8 @@
 
 # Instructions
 
-1. OpenLDAP server installation via ansible playbook in [/server](server folder)
+1. OpenLDAP server installation via ansible playbook in [server folder](/server)
 
-2. OpenLDAP client installation via terraform in [/client](client folder)
+2. OpenLDAP client installation via terraform in [client folder](/client)
 
-3. Homework report at [/Report.md](Report.md)
+3. Homework report at [Report.md](/Report.md)
