@@ -42,7 +42,7 @@
 
     - block:
         - name: add variables
-          shell: export PASSWORD={SSHA}o0Pj4XIrpWgkHADY0bjt/xA4Dq7tgtzk
+          shell: export PASSWORD={SSHA}o0Pj4XIrpWgkHADY0bjt/xA4Dq7tgtzk | export pass=admin
 
         - name: configure rootpassword
           ansible.builtin.shell: |
