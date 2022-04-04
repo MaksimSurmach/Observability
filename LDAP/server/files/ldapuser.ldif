@@ -8,7 +8,7 @@ uid: my_user
 uidNumber: 1005
 gidNumber: 1005
 homeDirectory: /home/my_user
-userPassword: $(cat pass)
+userPassword: $(cat PASSWORD)
 loginShell: /bin/bash
 gecos: my_user
 shadowLastChange: 0

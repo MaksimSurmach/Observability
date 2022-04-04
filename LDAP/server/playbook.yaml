@@ -2,6 +2,9 @@
   become: true
   tasks:
     - block:
+      - name: add variables
+        shell: export PASSWORD=$(slappasswd -s admin)
+
       - name: install
         package:
           name: '{{ item }}'
@@ -12,7 +15,9 @@
           #- openldap-clients​
           - openldap-devel
         ignore_errors: true
+      tags: [ ldapinstall ]
 
+    - block:
       - name: Create LDAP data directory
         file:
           path: "/home/openldap/"
@@ -29,7 +34,7 @@
           - ldapgroup.ldif
           - ldaprootpasswd.ldif
           - ldapuser.ldif
-      tags: [ ldapinstall ]
+      tags: [ copyfiles ]
 
     - block:
       - name: "Start slapd service"
@@ -41,11 +46,9 @@
       tags: [ ldapstart ]
 
     - block:
-        - name: add variables
-          shell: export PASSWORD={SSHA}o0Pj4XIrpWgkHADY0bjt/xA4Dq7tgtzk | export pass=admin
-
         - name: configure rootpassword
           ansible.builtin.shell: |
+            export PASSWORD=$(slappasswd -s admin)
             ldapadd -Y EXTERNAL -H ldapi:/// -f /home/openldap/ldaprootpasswd.ldif
             cp /usr/share/openldap-servers/DB_CONFIG.example /var/lib/ldap/DB_CONFIG
             chown -R ldap:ldap /var/lib/ldap/DB_CONFIG
@@ -55,9 +58,9 @@
             ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/schema/inetorgperson.ldif
 
             ldapmodify -Y EXTERNAL -H ldapi:/// -f /home/openldap/ldapdomain.ldif
-            ldapadd -x -D cn=Manager,dc=devopslab,dc=com -w $MANAGER_PASSWORD -f /home/openldap/baseldapdomain.ldif
-            ldapadd -x -w $MANAGER_PASSWORD -D "cn=Manager,dc=devopslab,dc=com" -f /home/openldap/ldapgroup.ldif
-            ldapadd -x -D cn=Manager,dc=devopslab,dc=com -w $MANAGER_PASSWORD -f  /home/openldap/ldapuser.ldif
+            ldapadd -x -w admin -D "cn=Manager,dc=devopsldab,dc=com" -f /home/openldap/baseldapdomain.ldif
+            ldapadd -x -w admin -D "cn=Manager,dc=devopsldab,dc=com" -f /home/openldap/group.ldif
+            ldapadd -x -D "cn=Manager,dc=devopsldab,dc=com" -w admin -f /home/openldap/ldapuser.ldif
             exit 0
 
       tags: [ ldapconfig ]
@@ -69,6 +72,7 @@
             state: present
           with_items: 
             - epel-release
+            - php-ldap
             - phpldapadmin
           ignore_errors: true
         
